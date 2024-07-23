@@ -73,9 +73,9 @@ def update_world(q1, q2, q1_dot, q2_dot, tau, action):
 
     # リンク2が可動範囲の限界に達した場合の外力
     if q2 <= 0:
-        tau[1, 0] += 20.0  # 0度のとき、正の方向に5N
+        tau[1, 0] += 20.0  # 0度のとき、正の方向に
     elif q2 >= np.radians(145):
-        tau[1, 0] += -20.0  # 145度のとき、負の方向に5N
+        tau[1, 0] += -20.0  # 145度のとき、負の方向に
 
     # 質量行列
     M_11 = m1*lg1**2 + I1 + m2*(l1**2 + lg2**2 + 2*l1*lg2*np.cos(q2)) + I2
@@ -186,30 +186,6 @@ def get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin):
         return np.random.choice(num_actions)
     else:
         return np.argmax(Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, :])
-
-# # 報酬関数
-# def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
-#     # reward = -(q1 + 10 * q1_dot)  # リンク1の角速度に応じた報酬
-#     v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
-#     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
-
-#     v2 = np.sqrt(v_x2**2 + v_y2**2)
-
-#     q1_change = next_q1 - q1
-#     q1_dot_change = next_q1_dot - q1_dot
-
-#     if q1_change < 0:
-#         q1p_reward = 10 + 10 * abs(q1_change)
-#     else:
-#         q1p_reward = -10 - 10 * abs(q1_change)
-
-#     if q1_dot_change < 0:
-#         q1v_reward = 10
-#     else:
-#         q1v_reward = -10
-
-#     # 報酬 = -上腕リンクの位置＋あるステップ前後の上腕リンクの位置関係＋10×前腕リンクの先端の速度
-#     reward = 1 * (- q1 + q1p_reward + q1v_reward + 10 * v2)
     
 def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
     # 時計回りの回転を評価するための報酬
