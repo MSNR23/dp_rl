@@ -42,7 +42,7 @@ q2_dot0 = 0.0
 dt = 0.01
 
 # CSVファイルの保存先ディレクトリ
-save_dir = r'dpbowl1'
+save_dir = r'test1'
 
 # ディレクトリが存在しない場合は作成
 if not os.path.exists(save_dir):
@@ -54,28 +54,28 @@ def update_world(q1, q2, q1_dot, q2_dot, tau, action):
     tau = np.zeros((2, 1))
     if action == 0:
         tau = np.array([[5.0], [0.0]])
-    elif action == 1:
-        tau = np.array([[-5.0], [0.0]])
-    elif action == 2:
-        tau = np.array([[0.0], [5.0]])
-    elif action == 3:
-        tau = np.array([[0.0], [-5.0]])
-    elif action == 4:
-        tau = np.array([[5.0], [5.0]])
-    elif action == 5:
-        tau = np.array([[-5.0], [-5.0]])
-    elif action == 6:
-        tau = np.array([[5.0], [-5.0]])
-    elif action == 7:
-        tau = np.array([[-5.0], [5.0]])
-    elif action == 8:
-        tau = np.array([[0.0], [0.0]])
+    # elif action == 1:
+    #     tau = np.array([[-5.0], [0.0]])
+    # elif action == 2:
+    #     tau = np.array([[0.0], [5.0]])
+    # elif action == 3:
+    #     tau = np.array([[0.0], [-5.0]])
+    # elif action == 4:
+    #     tau = np.array([[5.0], [5.0]])
+    # elif action == 5:
+    #     tau = np.array([[-5.0], [-5.0]])
+    # elif action == 6:
+    #     tau = np.array([[5.0], [-5.0]])
+    # elif action == 7:
+    #     tau = np.array([[-5.0], [5.0]])
+    # elif action == 8:
+    #     tau = np.array([[0.0], [0.0]])
 
     # リンク2が可動範囲の限界に達した場合の外力
     if q2 <= 0:
-        tau[1, 0] += 20.0  # 0度のとき、正の方向に
+        tau[1, 0] += 20.0  # 0度のとき、正の方向に5N
     elif q2 >= np.radians(145):
-        tau[1, 0] += -20.0  # 145度のとき、負の方向に
+        tau[1, 0] += -20.0  # 145度のとき、負の方向に5N
 
     # 質量行列
     M_11 = m1*lg1**2 + I1 + m2*(l1**2 + lg2**2 + 2*l1*lg2*np.cos(q2)) + I2
@@ -144,7 +144,7 @@ def runge_kutta(t, q1, q2, q1_dot, q2_dot, action, dt):
     return q1_new, q2_new, q1_dot_new, q2_dot_new
 
 max_number_of_steps = 6000 # 最大ステップ数
-num_episodes = 100
+num_episodes = 30
 
 # Q学習のパラメータ
 alpha = 0.1  # 学習率
@@ -156,7 +156,7 @@ num_q1_bins = 4
 num_q2_bins = 4
 num_q1_dot_bins = 4
 num_q2_dot_bins = 4
-num_actions = 9  # 行動数
+num_actions = 1  # 行動数
 
 Q = np.zeros((num_q1_bins, num_q2_bins, num_q1_dot_bins, num_q2_dot_bins, num_actions))
 def bins(clip_min, clip_max, num):
@@ -164,7 +164,7 @@ def bins(clip_min, clip_max, num):
     
 # 状態の離散化関数
 def digitize_state(q1, q2, q1_dot, q2_dot):
-    digitized = [np.digitize(q1, bins = bins(-2 * np.pi, 2 * np.pi, num_q1_bins)),
+    digitized = [np.digitize(q1, bins = bins(-np.pi, np.pi, num_q1_bins)),
                  np.digitize(q2, bins = bins(0, 145 * np.pi / 180, num_q2_bins)),
                  np.digitize(q1_dot, bins = bins(-10.0, 10.0, num_q1_dot_bins)),
                  np.digitize(q2_dot, bins = bins(-10.0, 10.0, num_q2_dot_bins))]
@@ -186,10 +186,34 @@ def get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin):
         return np.random.choice(num_actions)
     else:
         return np.argmax(Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, :])
+
+# # 報酬関数
+# def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
+#     # reward = -(q1 + 10 * q1_dot)  # リンク1の角速度に応じた報酬
+#     v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
+#     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
+
+#     v2 = np.sqrt(v_x2**2 + v_y2**2)
+
+#     q1_change = next_q1 - q1
+#     q1_dot_change = next_q1_dot - q1_dot
+
+#     if q1_change < 0:
+#         q1p_reward = 10 + 10 * abs(q1_change)
+#     else:
+#         q1p_reward = -10 - 10 * abs(q1_change)
+
+#     if q1_dot_change < 0:
+#         q1v_reward = 10
+#     else:
+#         q1v_reward = -10
+
+#     # 報酬 = -上腕リンクの位置＋あるステップ前後の上腕リンクの位置関係＋10×前腕リンクの先端の速度
+#     reward = 1 * (- q1 + q1p_reward + q1v_reward + 10 * v2)
     
 def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
     # 時計回りの回転を評価するための報酬
-    q1_change = next_q1 - q1
+    # q1_change = next_q1 - q1
 
     # 時計回りの回転に基づく報酬
     # if q1_change < 0:
@@ -197,17 +221,17 @@ def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
     # else:
     #     q1p_reward = -10 - 10 * abs(q1_change)
 
-    if q1_change < 0:
-        q1p_reward = 10
-    else:
-        q1p_reward = -10
+    # if q1_change < 0:
+    #     q1p_reward = 10
+    # else:
+    #     q1p_reward = -10
 
     # リンク2の先端の速度に基づく報酬を追加
     v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
     v2 = np.sqrt(v_x2**2 + v_y2**2)
 
-    reward = q1p_reward + 10 * v2 - 10 * q1_change
+    reward = 10 * v2 
 
     return reward
 
