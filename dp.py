@@ -29,12 +29,12 @@ I1 = m1 * l1**2 / 12
 I2 = (m2 - 0.19) * l2**2 / 12 + 0.19 * (l2 / 2)**2
 
 # 粘性係数
-b1 = 0.05
-b2 = 0.05
+b1 = 0.01
+b2 = 0.01
 
 # 初期条件
-q10 =  np.pi / 6
-q20 = 135 * np.pi / 180
+q10 =  -np.pi / 8
+q20 = 10 * np.pi / 180
 # q20 = 1 * np.pi / 6
 q1_dot0 = 0.0
 q2_dot0 = 0.0
@@ -42,7 +42,7 @@ q2_dot0 = 0.0
 dt = 0.01
 
 # CSVファイルの保存先ディレクトリ
-save_dir = r'test1'
+save_dir = r'exp4'
 
 # ディレクトリが存在しない場合は作成
 if not os.path.exists(save_dir):
@@ -53,29 +53,29 @@ def update_world(q1, q2, q1_dot, q2_dot, tau, action):
     # 行動に基づくトルク[Nm]を設定
     tau = np.zeros((2, 1))
     if action == 0:
-        tau = np.array([[5.0], [0.0]])
-    # elif action == 1:
-    #     tau = np.array([[-5.0], [0.0]])
-    # elif action == 2:
-    #     tau = np.array([[0.0], [5.0]])
-    # elif action == 3:
-    #     tau = np.array([[0.0], [-5.0]])
-    # elif action == 4:
-    #     tau = np.array([[5.0], [5.0]])
-    # elif action == 5:
-    #     tau = np.array([[-5.0], [-5.0]])
-    # elif action == 6:
-    #     tau = np.array([[5.0], [-5.0]])
-    # elif action == 7:
-    #     tau = np.array([[-5.0], [5.0]])
-    # elif action == 8:
-    #     tau = np.array([[0.0], [0.0]])
+        tau = np.array([[20.0], [0.0]])
+    elif action == 1:
+        tau = np.array([[-20.0], [0.0]])
+    elif action == 2:
+        tau = np.array([[0.0], [20.0]])
+    elif action == 3:
+        tau = np.array([[0.0], [-20.0]])
+    elif action == 4:
+        tau = np.array([[20.0], [20.0]])
+    elif action == 5:
+        tau = np.array([[-20.0], [-20.0]])
+    elif action == 6:
+        tau = np.array([[20.0], [-20.0]])
+    elif action == 7:
+        tau = np.array([[-20.0], [20.0]])
+    elif action == 8:
+        tau = np.array([[0.0], [0.0]])
 
     # リンク2が可動範囲の限界に達した場合の外力
     if q2 <= 0:
-        tau[1, 0] += 20.0  # 0度のとき、正の方向に5N
-    elif q2 >= np.radians(145):
-        tau[1, 0] += -20.0  # 145度のとき、負の方向に5N
+        tau[1, 0] += 30.0  # 0度のとき、正の方向に5N
+    elif q2 >= np.radians(150):
+        tau[1, 0] += -30.0  # 145度のとき、負の方向に5N
 
     # 質量行列
     M_11 = m1*lg1**2 + I1 + m2*(l1**2 + lg2**2 + 2*l1*lg2*np.cos(q2)) + I2
@@ -139,24 +139,24 @@ def runge_kutta(t, q1, q2, q1_dot, q2_dot, action, dt):
 
     # q2_new = np.clip(q2_new, 0, 145 * np.pi / 180)
     # リンク2の角度を0~145度に制限
-    q2_new = np.clip(q2_new, 0, np.radians(145))
+    q2_new = np.clip(q2_new, 0, np.radians(150))
 
     return q1_new, q2_new, q1_dot_new, q2_dot_new
 
 max_number_of_steps = 6000 # 最大ステップ数
-num_episodes = 30
+num_episodes = 500
 
 # Q学習のパラメータ
-alpha = 0.1  # 学習率
+alpha = 0.05  # 学習率
 gamma = 0.9  # 割引率
-epsilon = 0.2  # ε-greedy法のε
+# epsilon = 0.5 * (0.99 ** (episode + 1)) # ε-greedy法のε
 
 # Qテーブルのbin数
 num_q1_bins = 4
 num_q2_bins = 4
 num_q1_dot_bins = 4
 num_q2_dot_bins = 4
-num_actions = 1  # 行動数
+num_actions = 9  # 行動数
 
 Q = np.zeros((num_q1_bins, num_q2_bins, num_q1_dot_bins, num_q2_dot_bins, num_actions))
 def bins(clip_min, clip_max, num):
@@ -165,7 +165,7 @@ def bins(clip_min, clip_max, num):
 # 状態の離散化関数
 def digitize_state(q1, q2, q1_dot, q2_dot):
     digitized = [np.digitize(q1, bins = bins(-np.pi, np.pi, num_q1_bins)),
-                 np.digitize(q2, bins = bins(0, 145 * np.pi / 180, num_q2_bins)),
+                 np.digitize(q2, bins = bins(0, 150 * np.pi / 180, num_q2_bins)),
                  np.digitize(q1_dot, bins = bins(-10.0, 10.0, num_q1_dot_bins)),
                  np.digitize(q2_dot, bins = bins(-10.0, 10.0, num_q2_dot_bins))]
 
@@ -181,7 +181,8 @@ def reset():
     return q1, q2, q1_dot, q2_dot
 
 # ε-greedy法に基づく行動の選択
-def get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin):
+def get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, episode):
+    epsilon = 0.5 * (0.99 ** (episode + 1)) # ε-greedy法のε
     if np.random.rand() < epsilon:
         return np.random.choice(num_actions)
     else:
@@ -189,51 +190,35 @@ def get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin):
 
 # # 報酬関数
 # def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
-#     # reward = -(q1 + 10 * q1_dot)  # リンク1の角速度に応じた報酬
-#     v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
-#     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
+    # # リンク2の先端の速度に基づく報酬を追加
+    # v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
+    # v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
+    # v2 = np.sqrt(v_x2**2 + v_y2**2)
 
-#     v2 = np.sqrt(v_x2**2 + v_y2**2)
+    # reward = 10 * v2 
 
-#     q1_change = next_q1 - q1
-#     q1_dot_change = next_q1_dot - q1_dot
-
-#     if q1_change < 0:
-#         q1p_reward = 10 + 10 * abs(q1_change)
-#     else:
-#         q1p_reward = -10 - 10 * abs(q1_change)
-
-#     if q1_dot_change < 0:
-#         q1v_reward = 10
-#     else:
-#         q1v_reward = -10
-
-#     # 報酬 = -上腕リンクの位置＋あるステップ前後の上腕リンクの位置関係＋10×前腕リンクの先端の速度
-#     reward = 1 * (- q1 + q1p_reward + q1v_reward + 10 * v2)
-    
-def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
-    # 時計回りの回転を評価するための報酬
-    # q1_change = next_q1 - q1
-
-    # 時計回りの回転に基づく報酬
-    # if q1_change < 0:
-    #     q1p_reward = 10 + 10 * abs(q1_change)
-    # else:
-    #     q1p_reward = -10 - 10 * abs(q1_change)
-
-    # if q1_change < 0:
-    #     q1p_reward = 10
-    # else:
-    #     q1p_reward = -10
-
-    # リンク2の先端の速度に基づく報酬を追加
+    # return reward
+def compute_reward(q1, q2, q1_dot, q2_dot):
+# 前腕リンクの手先速度を計算
     v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
     v2 = np.sqrt(v_x2**2 + v_y2**2)
 
-    reward = 10 * v2 
+    # 前腕リンクの角度が45度に近いかを評価
+    q1_deg = np.degrees(q1)
+    q2_deg = np.degrees(q2)
+
+    if q2_deg <= 45:
+        angle_reward = (180 - q1_deg - q2_deg) / 45.0
+    elif q2_deg <= 90:
+        angle_reward = (90 - (180 - q1_deg - q2_deg)) / 45.0
+    else:
+        angle_reward = 0
+
+    reward = angle_reward * v2
 
     return reward
+
 
         
 
@@ -241,49 +226,74 @@ def compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot):
 
 # Q学習のメイン関数
 def q_learning(runge_kutta):
-    for epoch in range(num_episodes):
-        total_reward = 0
-        sumReward = 0
-        q1, q2, q1_dot, q2_dot = reset()
-        q1_bin, q2_bin, q1_dot_bin, q2_dot_bin = digitize_state(q1, q2, q1_dot, q2_dot)
-        action = get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin)
+# CSVファイルの準備
+    csv_file_path = os.path.join(save_dir, f'sumR.csv')
+    with open(csv_file_path, 'w', newline='') as csvfile:
+        csv_writer2 = csv.writer(csvfile)
+        csv_writer2.writerow(['episode', 'sumReward'])
 
-        # CSVファイルの準備
-        csv_file_path = os.path.join(save_dir, f'try_{epoch + 1}.csv')
-        with open(csv_file_path, 'w', newline='') as csvfile:
-            csv_writer = csv.writer(csvfile)
-            csv_writer.writerow(['Time', 'Theta1', 'Theta2', 'Omega1', 'Omega2', 'Reward'])
+        for episode in range(num_episodes):
+            total_reward = 0
+            sumReward = 0
+            q1, q2, q1_dot, q2_dot = reset()
+            q1_bin, q2_bin, q1_dot_bin, q2_dot_bin = digitize_state(q1, q2, q1_dot, q2_dot)
+            action = get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, episode)
 
-            for i in range(max_number_of_steps):
-                q1, q2, q1_dot, q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, action, dt)
+            # max_velocity = 0
+            # max_reward_state = None
 
-                q1_bin, q2_bin, q1_dot_bin, q2_dot_bin = digitize_state(q1, q2, q1_dot, q2_dot)
-                print(f'theta1: {q1 * 180 / np.pi}, theta2: {q2 * 180 / np.pi}, omega1: {q1_dot}, omega2: {q2_dot}')
+            # CSVファイルの準備
+            csv_file_path = os.path.join(save_dir, f'try_{episode + 1}.csv')
+            with open(csv_file_path, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile)
+                csv_writer.writerow(['Time', 'Theta1', 'Theta2', 'Omega1', 'Omega2', 'v2', 'Reward'])
 
-                next_action = get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin)
-                print(action)
-                next_q1, next_q2, next_q1_dot, next_q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, next_action, dt)
+                for i in range(max_number_of_steps):
+                    q1, q2, q1_dot, q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, action, dt)
+                    v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
+                    v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
+                    v2 = np.sqrt(v_x2**2 + v_y2**2)
+                    
+                    # if v2 > max_velocity:
+                    #     max_velocity = v2
+                    #     max_reward_state = (q1, q2, q1_dot, q2_dot)
 
-                next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin = digitize_state(next_q1, next_q2, next_q1_dot, next_q2_dot)
+                    q1_bin, q2_bin, q1_dot_bin, q2_dot_bin = digitize_state(q1, q2, q1_dot, q2_dot)
+                    print(f'theta1: {q1 * 180 / np.pi}, theta2: {q2 * 180 / np.pi}, omega1: {q1_dot}, omega2: {q2_dot}')
 
-                reward = compute_reward(q1, q2, q1_dot, q2_dot, next_q1, next_q1_dot)
-                total_reward = reward
-                sumReward += gamma ** (i + 1) * reward
-                Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action] += alpha * (reward + gamma * np.max(Q[next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin, action]) - Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action])
+                    next_action = get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, episode)
+                    print(action)
+                    next_q1, next_q2, next_q1_dot, next_q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, next_action, dt)
 
-                csv_writer.writerow([i * dt, q1 * 180 / np.pi, q2 * 180 / np.pi, q1_dot, q2_dot, total_reward])
+                    next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin = digitize_state(next_q1, next_q2, next_q1_dot, next_q2_dot)
 
-                q1 = next_q1
-                q2 = next_q2
-                q1_dot = next_q1_dot
-                q2_dot = next_q2_dot
-                action = next_action
+                    reward = compute_reward(q1, q2, q1_dot, q2_dot)
+                    total_reward = reward
+                    sumReward += gamma ** (i + 1) * reward
+                    Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action] += alpha * (reward + gamma * np.max(Q[next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin, action]) - Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action])
 
-                print(f'Epoch: {epoch + 1}, Step: {i}, Total Reward: {total_reward}')
+                    csv_writer.writerow([i * dt, q1 * 180 / np.pi, q2 * 180 / np.pi, q1_dot, q2_dot, v2, total_reward])
 
-                # time.sleep(0.01)
+                    q1 = next_q1
+                    q2 = next_q2
+                    q1_dot = next_q1_dot
+                    q2_dot = next_q2_dot
+                    action = next_action
 
-        print(f'Data for epoch {epoch + 1} has been saved to {csv_file_path}')
+                    print(f'episode: {episode + 1}, Step: {i}, Total Reward: {total_reward}')
+
+                    # time.sleep(0.01)
+            csv_writer2.writerow([episode + 1, sumReward])
+
+            # # エピソードの最後に最大報酬状態での報酬を計算
+            # if max_reward_state is not None:
+            #     q1, q2, q1_dot, q2_dot = max_reward_state
+            #     reward = compute_reward(q1, q2, q1_dot, q2_dot)
+            #     total_reward += reward
+            #     print(f'episode: {episode + 1}, Max Reward State: {max_reward_state}, Reward: {reward}')
+            #     time.sleep(2)
+
+            print(f'Data for episode {episode + 1} has been saved to {csv_file_path}')
             
 
 if __name__ == "__main__":
