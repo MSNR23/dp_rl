@@ -345,7 +345,20 @@ def q_learning(runge_kutta):
             # if maxReward == 15000:
             #     print("finish")
             #     break
-
+# 追加部分: 最大報酬が10000を超えた場合にQテーブルをCSVファイルに保存
+            if maxReward > 10000:
+                q_table_file_path = os.path.join(save_dir, f'Q_table_episode_{episode + 1}.csv')
+                with open(q_table_file_path, 'w', newline='') as qfile:
+                    q_writer = csv.writer(qfile)
+                    q_writer.writerow(['q1_bin', 'q2_bin', 'q1_dot_bin', 'q2_dot_bin', 'action', 'value'])
+                    for q1_bin in range(num_q1_bins):
+                        for q2_bin in range(num_q2_bins):
+                            for q1_dot_bin in range(num_q1_dot_bins):
+                                for q2_dot_bin in range(num_q2_dot_bins):
+                                    for action in range(num_actions):
+                                        q_writer.writerow([q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action, Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action]])
+                print(f'Q-table for episode {episode + 1} saved to {q_table_file_path}')
+                
 if __name__ == "__main__":
     # mainプログラムの実行
     # main()
