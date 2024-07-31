@@ -566,74 +566,6 @@ def compute_reward(q1, q2, q1_dot, q2_dot):
 
     return reward
 
-
-        
-
-    # return reward
-
-# # Q学習のメイン関数
-# def q_learning(runge_kutta):
-# # CSVファイルの準備
-#     csv_file_path = os.path.join(save_dir, f'sumR.csv')
-#     with open(csv_file_path, 'w', newline='') as csvfile:
-#         csv_writer2 = csv.writer(csvfile)
-#         csv_writer2.writerow(['episode', 'sumReward'])
-
-#         for episode in range(num_episodes):
-#             total_reward = 0
-#             sumReward = 0
-#             q1, q2, q1_dot, q2_dot = reset()
-#             q1_bin, q2_bin, q1_dot_bin, q2_dot_bin = digitize_state(q1, q2, q1_dot, q2_dot)
-#             action = get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, episode)
-
-#             # max_velocity = 0
-#             # max_reward_state = None
-
-#             # CSVファイルの準備
-#             csv_file_path = os.path.join(save_dir, f'try_{episode + 1}.csv')
-#             with open(csv_file_path, 'w', newline='') as csvfile:
-#                 csv_writer = csv.writer(csvfile)
-#                 csv_writer.writerow(['Time', 'Theta1', 'Theta2', 'Omega1', 'Omega2', 'v2', 'Reward'])
-
-#                 for i in range(max_number_of_steps):
-#                     q1, q2, q1_dot, q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, action, dt)
-#                     v_x2 = -l1 * np.sin(q1) * q1_dot - l2 * np.sin(q1 + q2) * (q1_dot + q2_dot)
-#                     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
-#                     v2 = np.sqrt(v_x2**2 + v_y2**2)
-                    
-#                     # if v2 > max_velocity:
-#                     #     max_velocity = v2
-#                     #     max_reward_state = (q1, q2, q1_dot, q2_dot)
-
-#                     q1_bin, q2_bin, q1_dot_bin, q2_dot_bin = digitize_state(q1, q2, q1_dot, q2_dot)
-#                     print(f'theta1: {q1 * 180 / np.pi}, theta2: {q2 * 180 / np.pi}, omega1: {q1_dot}, omega2: {q2_dot}')
-
-#                     next_action = get_action(q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, episode)
-#                     print(action)
-#                     next_q1, next_q2, next_q1_dot, next_q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, next_action, dt)
-
-#                     next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin = digitize_state(next_q1, next_q2, next_q1_dot, next_q2_dot)
-
-#                     reward = compute_reward(q1, q2, q1_dot, q2_dot)
-#                     total_reward = reward
-#                     sumReward += gamma ** (i + 1) * reward
-#                     Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action] += alpha * (reward + gamma * np.max(Q[next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin, action]) - Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action])
-
-#                     csv_writer.writerow([i * dt, q1 * 180 / np.pi, q2 * 180 / np.pi, q1_dot, q2_dot, v2, total_reward])
-
-#                     q1 = next_q1
-#                     q2 = next_q2
-#                     q1_dot = next_q1_dot
-#                     q2_dot = next_q2_dot
-#                     action = next_action
-
-#                     print(f'episode: {episode + 1}, Step: {i}, Total Reward: {total_reward}')
-
-#                     # time.sleep(0.01)
-#             csv_writer2.writerow([episode + 1, sumReward])
-
-
-#             print(f'Data for episode {episode + 1} has been saved to {csv_file_path}')
 # Q学習のメイン関数
 def q_learning(runge_kutta):
     # episode = 0
@@ -713,8 +645,3 @@ if __name__ == "__main__":
     # Q学習の実行
     q_learning(runge_kutta)
 
-if __name__ == "__main__":
-    # mainプログラムの実行
-    # main()
-    # Q学習の実行
-    q_learning(runge_kutta)
