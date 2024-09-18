@@ -7,7 +7,7 @@ import os
 
 # 定数
 
-L = 1.72 # 身長
+L = 1.90 # 身長
 
 ma = 70 # 全体質量  
 
@@ -19,25 +19,34 @@ l2 = 0.254 * L
 
 # 前腕の長さ
 l_forearm = 0.575 * l2
-# 手首の長さ
+# 手の長さ
 l_hand = 0.425 * l2
 # 前腕の質量
 m_forearm = 0.016 * ma
-# 手首の質量
+# 手の質量
 m_hand = 0.006 * ma
 
 
 # 質点の質量（m_hand + 投擲物）
 m1 = 0.028 * ma
-m2 = m_forearm + m_hand + 0.14
+m2 = m_forearm + m_hand + 7.0
+# m3 = 7.0 # 投擲物の質量
 
 # 重心までの長さ（m_hand + 投擲物）
 lg1 = l1 / 2
-lg2 = (m_forearm * (l_forearm / 2) + m_hand * (l_forearm + l_hand / 2) + 0.14 * l2) / (m_forearm + m_hand + 0.14)
+lg2 = (m_forearm * (l_forearm / 2) + m_hand * (l_forearm + l_hand / 2) + 7.0 * l2) / (m_forearm + m_hand + 7.0)
 
-# 慣性モーメント
+# 上腕の慣性モーメント
 I1 = m1 * l1**2 / 12
-I2 = ((m_forearm * l_forearm**2 + m_hand * l_hand**2)/3 + 0.14 * l2**2)
+# I2 = ((m_forearm * l_forearm**2 + m_hand * l_hand**2)/3 + 7.0 * l2**2)
+# 前腕の慣性モーメント（平行軸の定理）
+I2_forearm = m_forearm * l_forearm**2 / 12 + m_forearm * lg1**2
+# 手の慣性モーメント（平行軸の定理）
+I2_hand = m_hand * l_hand**2 / 12 + m_hand * (l_forearm + lg2)**2
+# 投擲物の慣性モーメント
+I2_ball = 7.0 * l2**2
+# 前腕リンク全体の慣性モーメント
+I2 = I2_forearm + I2_hand + I2_ball
 
 # 粘性係数
 b1 = 0.01
@@ -53,10 +62,10 @@ q2_dot0 = 0.0
 dt = 0.005
 
 # CSVファイルの保存先ディレクトリ
-save_dir1 = r'1.72_0.14_max_R_bow'
-save_dir2 = r'1.72_0.14_try_bow'
-save_dir3 = r'1.72_0.14_maxQ_bow'
-save_dir4 = r'1.72_0.14_finQ_bow'
+save_dir1 = r'1.90_7.0_max_R_bow'
+save_dir2 = r'1.90_7.0_try_bow'
+save_dir3 = r'1.90_7.0_maxQ_bow'
+save_dir4 = r'1.90_7.0_finQ_bow'
 
 # ディレクトリが存在しない場合は作成
 if not os.path.exists(save_dir1):
@@ -76,21 +85,21 @@ def update_world(q1, q2, q1_dot, q2_dot, tau, action):
     # 行動に基づくトルク[Nm]を設定
     tau = np.zeros((2, 1))
     if action == 0:
-        tau = np.array([[15.0], [0.0]])
+        tau = np.array([[60.0], [0.0]])
     elif action == 1:
-        tau = np.array([[-15.0], [0.0]])
+        tau = np.array([[-60.0], [0.0]])
     elif action == 2:
-        tau = np.array([[0.0], [10.0]])
+        tau = np.array([[0.0], [45.0]])
     elif action == 3:
-        tau = np.array([[0.0], [-10.0]])
+        tau = np.array([[0.0], [-45.0]])
     elif action == 4:
-        tau = np.array([[15.0], [10.0]])
+        tau = np.array([[60.0], [45.0]])
     elif action == 5:
-        tau = np.array([[-15.0], [-10.0]])
+        tau = np.array([[-60.0], [-45.0]])
     elif action == 6:
-        tau = np.array([[15.0], [-10.0]])
+        tau = np.array([[60.0], [-45.0]])
     elif action == 7:
-        tau = np.array([[-15.0], [10.0]])
+        tau = np.array([[-60.0], [45.0]])
     elif action == 8:
         tau = np.array([[0.0], [0.0]])
 
@@ -283,7 +292,7 @@ def q_learning(runge_kutta):
             csv_file_path = os.path.join(save_dir2, f'try_{episode + 1}.csv')
             with open(csv_file_path, 'w', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile)
-                csv_writer.writerow(['Time', 'Theta1', 'Theta2', 'Omega1', 'Omega2', 'v2', 'Reward', 'TotalEnergyLink1', 'TotalEnergyLink2', 'StepEnergy', 'CumulativeEnergy'])
+                csv_writer.writerow(['Time', 'Theta1', 'Theta2', 'Omega1', 'Omega2', 'v2', 'Theta_v', 'Reward', 'TotalEnergyLink1', 'TotalEnergyLink2', 'StepEnergy', 'CumulativeEnergy'])
 
                 for i in range(max_number_of_steps):
                     q1, q2, q1_dot, q2_dot = runge_kutta(0, q1, q2, q1_dot, q2_dot, action, dt)
@@ -291,24 +300,29 @@ def q_learning(runge_kutta):
                     v_y2 = l1 * np.cos(q1) * q1_dot + l2 * np.cos(q1 + q2) * (q1_dot + q2_dot)
                     v2 = np.sqrt(v_x2**2 + v_y2**2)
 
+                    # 前腕リンクの角度が45度に近いかを評価
+                    q1_deg = np.degrees(q1)
+                    q2_deg = np.degrees(q2)
+                    qv_deg = (q1_deg + q2_deg) - 90
+
                     # トルクを取得
                     tau = np.zeros((2, 1))
                     if action == 0:
-                        tau = np.array([[15.0], [0.0]])
+                        tau = np.array([[60.0], [0.0]])
                     elif action == 1:
-                        tau = np.array([[-15.0], [0.0]])
+                        tau = np.array([[-60.0], [0.0]])
                     elif action == 2:
-                        tau = np.array([[0.0], [10.0]])
+                        tau = np.array([[0.0], [45.0]])
                     elif action == 3:
-                        tau = np.array([[0.0], [-10.0]])
+                        tau = np.array([[0.0], [-45.0]])
                     elif action == 4:
-                        tau = np.array([[15.0], [10.0]])
+                        tau = np.array([[60.0], [45.0]])
                     elif action == 5:
-                        tau = np.array([[-15.0], [-10.0]])
+                        tau = np.array([[-60.0], [-45.0]])
                     elif action == 6:
-                        tau = np.array([[15.0], [-10.0]])
+                        tau = np.array([[60.0], [-45.0]])
                     elif action == 7:
-                        tau = np.array([[-15.0], [10.0]])
+                        tau = np.array([[-60.0], [45.0]])
                     elif action == 8:
                         tau = np.array([[0.0], [0.0]])
 
@@ -332,7 +346,7 @@ def q_learning(runge_kutta):
                     Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action] += alpha * (reward + gamma * np.max(Q[next_q1_bin, next_q2_bin, next_q1_dot_bin, next_q2_dot_bin]) - Q[q1_bin, q2_bin, q1_dot_bin, q2_dot_bin, action])
 
                     # データをCSVに記録
-                    csv_writer.writerow([i * dt, q1 * 180 / np.pi, q2 * 180 / np.pi, q1_dot, q2_dot, v2, reward, energy_consumed_link1, energy_consumed_link2, step_energy, cumulative_energy])
+                    csv_writer.writerow([i * dt, q1 * 180 / np.pi, q2 * 180 / np.pi, q1_dot, q2_dot, v2, qv_deg % 360, reward, energy_consumed_link1, energy_consumed_link2, step_energy, cumulative_energy])
 
                     # 最大報酬の更新とQテーブルの保存
                     if reward > max_reward:
