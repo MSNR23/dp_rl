@@ -30,16 +30,13 @@ m_hand = 0.006 * ma
 # 質点の質量（m_hand + 投擲物）
 m1 = 0.028 * ma
 m2 = m_forearm + m_hand + 0.14
-# m3 = 0.14 # 投擲物の質量
 
 # 重心までの長さ（m_hand + 投擲物）
 lg1 = l1 / 2
-# lg2 = (m_forearm * (l_forearm / 2) + (m_hand + 0.14) * (l_forearm + l_hand / 2)) / (m_forearm + (m_hand + 0.14))
 lg2 = (m_forearm * (l_forearm / 2) + m_hand * (l_forearm + l_hand / 2) + 0.14 * l2) / (m_forearm + m_hand + 0.14)
 
 # 慣性モーメント
 I1 = m1 * l1**2 / 12
-# I2 = (m2 - 0.14) * l2**2 / 12 + 0.14 * l2 **2
 I2 = ((m_forearm * l_forearm**2 + m_hand * l_hand**2)/3 + 0.14 * l2**2)
 
 # 粘性係数
